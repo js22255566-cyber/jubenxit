@@ -1,0 +1,9 @@
+{
+  "repository": "js22255566-cyber/jubenxit",
+  "url": "https://github.com/js22255566-cyber/jubenxit",
+  "branch": "main",
+  "remote": "github",
+  "mode": "source-snapshot",
+  "trigger": "after-authorized-development-task",
+  "preserveSitesHosting": true
+}

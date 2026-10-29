@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "对白工坊 · WhatsApp 联动验证版",
+  "version": "0.1.10",
+  "description": "将对白工坊的新文字消息交给你明确绑定的 WhatsApp 网页群，不读取联系人或登录凭据。",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://dialogue-atelier-7024.candidkoala259.chatgpt.site/*"
+      ],
+      "js": [
+        "site-bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "whatsapp.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://dialogue-atelier-7024.candidkoala259.chatgpt.site/*"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "dialogue-atelier",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate-artifact.mjs",
+    "preview": "node scripts/preview.mjs",
+    "test": "node scripts/test-single-api.mjs && node scripts/test-sync.mjs"
+  }
+}

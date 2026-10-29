@@ -1,0 +1,16 @@
+dist/
+site.tar.gz
+*.tar.gz
+node_modules/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+*service_account*.json
+*credentials*.json
+*.log
+.DS_Store
+Thumbs.db
+work/
