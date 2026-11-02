@@ -6,6 +6,9 @@
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate-artifact.mjs",
     "preview": "node scripts/preview.mjs",
-    "test": "node scripts/test-single-api.mjs && node scripts/test-sync.mjs"
+    "test": "node scripts/test-single-api.mjs && node scripts/test-sync.mjs",
+    "test:bai": "node scripts/test-bai-routing.mjs && node scripts/test-bai-ui-vm.mjs",
+    "test:bai:regression": "node scripts/test-bai-regression.mjs",
+    "test:bai:live": "node scripts/smoke-bai-live.mjs --live"
   }
 }
