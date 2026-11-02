@@ -1,0 +1,22 @@
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const html=await fs.readFile('ui/index.html','utf8'),script=html.match(/<script>([\s\S]*)<\/script>/)[1];
+const start=script.indexOf('const wsJobs='),end=script.indexOf('async function openWsConnection(',start);
+const calls=[],disk=new Map();let release,entered;
+const firstSend=new Promise(resolve=>entered=resolve);
+const context=vm.createContext({copyBlock:m=>'No.30 F 53 Trade manager\n'+m.pt,user:{id:'owner'},prefs:{wsEnabled:true,wsExtensionId:'fixture',wsBinding:{name:'Test group',groupHash:'hash'}},localStorage:{getItem:k=>disk.get(k)||null,setItem:(k,v)=>disk.set(k,v)},window:{addEventListener(){},postMessage(){}},location:{origin:'https://site.test'},uid:()=> 'unused',now:()=>new Date().toISOString(),esc:String,renderMessages(){},toast(){},setTimeout:()=>0,clearTimeout(){}});
+vm.runInContext(script.slice(start,end),context);
+context.mock=async(command,payload)=>{calls.push({command,payload});if(command==='STATUS')return{ready:true,binding:{groupHash:'hash'}};if(payload.id==='m0'){entered();await new Promise(resolve=>release=resolve)}return{state:'submitted',messageId:'wa-'+payload.id}};
+vm.runInContext('wsRequest=mock',context);
+context.record={id:'m0',characterId:'same-persona',pt:'same text',images:[]};
+vm.runInContext('queueWsSend(record)',context);
+const flushing=vm.runInContext('flushWsJobs()',context);await firstSend;
+for(let i=1;i<8;i++){context.record={id:'m'+i,characterId:'same-persona',pt:'same text',images:[]};vm.runInContext('queueWsSend(record);queueWsSend(record)',context)}
+release();await flushing;
+assert.deepEqual(calls.filter(c=>c.command==='SEND').map(c=>c.payload.id),Array.from({length:8},(_,i)=>'m'+i));
+assert.equal(calls.filter(c=>c.command==='STATUS').length,1);
+assert.equal(vm.runInContext("[...wsJobs.values()].filter(j=>j.state==='submitted').length",context),8);
+await vm.runInContext('flushWsJobs()',context);assert.equal(calls.filter(c=>c.command==='SEND').length,8);
+const retained=JSON.parse(disk.get('dialogue-ws-jobs:owner'));assert.equal(retained.length,8);assert.ok(retained.every(j=>j.messageId==='wa-'+j.id));
+console.log('PASS rapid same-persona/same-text independent jobs, enqueue during pending send, ordered draining, one batch preflight, stable-ID duplicate suppression and durable receipts; offline VM');
