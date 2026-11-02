@@ -1,0 +1,13 @@
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const html=await fs.readFile('ui/index.html','utf8'),script=html.match(/<script>([\s\S]*)<\/script>/)[1];new vm.Script(script);
+const a=script.indexOf('function cloudSendStatus('),b=script.indexOf('function renderMessages(',a),entries=new Map([['retained',{status:'failed',error:'Google Docs 403 <img src=x onerror=alert(1)>',record:{id:'retained',pt:'Retained message'}}]]);
+let modalBody='';const context=vm.createContext({sendOutbox:entries,esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'),modal:(title,body)=>modalBody=body});
+vm.runInContext(script.slice(a,b)+';globalThis.ui={cloudSendStatus,openSyncDetails}',context);
+const status=context.ui.cloudSendStatus({id:'retained'});assert.ok(status.includes('data-action="syncdetails"'));assert.ok(status.includes('data-action="retrysend"'));
+context.ui.openSyncDetails('retained');assert.ok(modalBody.includes('Google Docs 403'));assert.ok(modalBody.includes('&lt;img'));assert.ok(!modalBody.includes('<img'));assert.equal(entries.get('retained').record.pt,'Retained message');assert.equal(entries.size,1);
+let refreshes=0;const conflictContext=vm.createContext({cloudWrites:0,cloudWriteQueue:Promise.resolve(),refreshPromise:null,version:'old',api:async()=>{throw Object.assign(Error('Document version changed'),{status:409,syncCode:'DOCS_REVISION_CONFLICT'})},refresh:async()=>refreshes++});
+vm.runInContext(script.match(/^async function cloudMutation\(.*$/m)[0]+';globalThis.mutate=cloudMutation',conflictContext);
+await assert.rejects(conflictContext.mutate({}),e=>e.status===409&&e.retryable===true);assert.equal(refreshes,1);
+console.log('PASS sync error reason is visible and escaped; opening details retains queued message; typed Docs revision conflict refreshes and allows existing bounded outbox retry; complete UI syntax valid');
