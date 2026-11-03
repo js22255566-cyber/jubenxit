@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "对白工坊 · WhatsApp 联动验证版",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "将对白工坊的新文字消息交给你明确绑定的 WhatsApp 网页群，不读取联系人或登录凭据。",
   "permissions": [
     "storage",

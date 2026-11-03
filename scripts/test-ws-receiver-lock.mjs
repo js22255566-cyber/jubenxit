@@ -1,0 +1,7 @@
+import fs from 'node:fs/promises';import vm from 'node:vm';import assert from 'node:assert/strict';
+const receiver=await fs.readFile('ws-extension/whatsapp.js','utf8'),a=receiver.indexOf('const receiverJobs='),b=receiver.indexOf("globalThis.__DW_WA_RECEIVER='",a);let listener,finish,sends=0,group='g';
+const context=vm.createContext({Map,chrome:{runtime:{id:'fixture',onMessage:{addListener:fn=>listener=fn}}},describe:async()=>({groupHash:group}),send:async()=>{sends++;return new Promise(resolve=>finish=resolve)}});vm.runInContext(receiver.slice(a,b),context);
+const payload={id:'first',text:'中文\n\nPortuguês',groupHash:'g'},call=message=>new Promise(resolve=>listener(message,{id:'fixture'},resolve));
+const first=call({type:'SEND',payload});const blocked=await call({type:'SEND',payload:{...payload,id:'second'}});assert.equal(blocked.state,'failed');assert.equal(sends,1);const pending=await call({type:'VERIFY',payload});assert.equal(pending.inProgress,true);
+finish({state:'submitted',messageId:'observed-first'});await first;await new Promise(setImmediate);const receipt=await call({type:'VERIFY',payload});assert.equal(receipt.state,'submitted');assert.equal(receipt.messageId,'observed-first');await call({type:'SEND',payload});assert.equal(sends,1);group='other';assert.equal((await call({type:'VERIFY',payload})).state,'unknown');
+console.log('PASS WhatsApp receiver permits one send at a time, caches exact job receipts, rejects changed group and never replays the same job on verification');

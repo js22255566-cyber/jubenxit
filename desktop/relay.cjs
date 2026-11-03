@@ -10,7 +10,7 @@ function createRelay({background,storage,transport,siteUrl,showWhatsApp}){
   async create(){showWhatsApp()},
   async sendMessage(id,message){if(id!==TAB)throw Error('目标窗口不存在');return transport.call(message)}
  }};
- vm.runInNewContext(background,{chrome,URL,console:{log(){},error(){}}},{filename:'packaged-ws-background.js',timeout:1000});
+ vm.runInNewContext(background,{chrome,URL,setTimeout,clearTimeout,console:{log(){},error(){}}},{filename:'packaged-ws-background.js',timeout:1000});
  function call(request,popup=false){return new Promise(resolve=>{const sender=popup?{url:POPUP}:{tab:{url:siteUrl()}};try{if(!listener(request,sender,resolve))resolve({ok:false,error:'桌面连接拒绝了此来源'})}catch{resolve({ok:false,error:'桌面连接处理失败'})}})}
  return{ID,call};
 }

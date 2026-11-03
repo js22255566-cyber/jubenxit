@@ -6,7 +6,7 @@ if(origins.has(location.origin)&&process.isMainFrame){
   if(event.source!==window||event.origin!==location.origin||event.data?.source!=='DW_WS_REQUEST')return;
   const {requestId,command,payload,extensionId}=event.data;
   if(extensionId&&extensionId!=='dialogue-desktop-v1')return;
-  if(typeof requestId!=='string'||requestId.length>150||!['STATUS','OPEN','SEND','RECEIPT'].includes(command))return;
+  if(typeof requestId!=='string'||requestId.length>150||!['STATUS','OPEN','SEND','RECEIPT','VERIFY','CONFIRM'].includes(command))return;
   let result;try{result=await ipcRenderer.invoke('desktop:relay',{command,payload})}catch{result={ok:false,error:'桌面连接暂时不可用，请查看顶部连接状态。'}}
   window.postMessage({source:'DW_WS_RESPONSE',extensionId:'dialogue-desktop-v1',requestId,result},location.origin);
  });

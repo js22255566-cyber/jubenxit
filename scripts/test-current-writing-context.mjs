@@ -1,0 +1,7 @@
+import fs from 'node:fs/promises';import assert from 'node:assert/strict';
+let source=(await fs.readFile('worker/index.js','utf8')).replace("import {page} from './page.js';","const page='fixture';");source+='\nexport {'+(source.includes('async function legacyAi(')?'legacyAi':'ai')+' as legacyAi};';const {legacyAi}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));let observed,calls=0;
+globalThis.fetch=async(url,init)=>{calls++;observed=JSON.parse(JSON.parse(init.body).messages[1].content[0].text);return Response.json({choices:[{message:{content:JSON.stringify({items:[{characterId:'c1',pt:'Resposta'}]})}}]})};
+const env={AI_API_KEY:'fictional',AI_MODEL:'fixture'},state={characters:[{id:'c1'}],messages:[{characterId:'c1',pt:'old Google context',order:1}],learning:[]},owner={admin:true};
+await legacyAi(env,state,owner,{characterId:'c1',mode:'translate',instruction:'test',recentContext:[{id:'local-pending',characterId:'c1',zh:'本机已发送但尚未备份',pt:'fresh pending message',order:2}]});assert.equal(observed.context[0].pt,'fresh pending message');assert.equal(observed.context.length,1);
+await assert.rejects(legacyAi(env,state,owner,{characterId:'c1',recentContext:[{characterId:'other',pt:'not allowed'}]}),e=>e.status===403);assert.equal(calls,1);
+console.log('PASS current UI last-five context reaches AI before Google backup and unknown/unauthorized persona context is rejected');

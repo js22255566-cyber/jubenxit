@@ -45,7 +45,7 @@ function isShell(event){return event.sender===win?.webContents&&policy.mainFrame
 function isWorkbench(event){return event.sender===workbench?.webContents&&policy.mainFrame(event)&&policy.trustedSite(event.senderFrame.url)}
 ipcMain.handle('desktop:notice',async(event,body)=>{if(!isShell(event)||typeof body?.title!=='string'||typeof body.text!=='string'||body.text.length>6000)throw Error('不允许的提示来源');await dialog.showMessageBox(win,{type:'info',message:body.title.slice(0,100),detail:body.text,buttons:['知道了']});return{ok:true}});
 ipcMain.handle('desktop:relay',async(event,request)=>{
- if(!isWorkbench(event)||!request||!['STATUS','OPEN','SEND','RECEIPT'].includes(request.command))return{ok:false,error:'此页面无权调用桌面连接'};
+ if(!isWorkbench(event)||!request||!['STATUS','OPEN','SEND','RECEIPT','VERIFY','CONFIRM'].includes(request.command))return{ok:false,error:'此页面无权调用桌面连接'};
  if(request.payload&&JSON.stringify(request.payload).length>24000)return{ok:false,error:'请求过大'};
  return relay.call(request);
 });
