@@ -1,0 +1,9 @@
+'use strict';
+const $=id=>document.getElementById(id);let pollBusy=false;
+function show(title,text){return window.atelier.notice(title,text)}
+async function status(){if(pollBusy)return;pollBusy=true;try{const r=await window.atelier.command('status');$('version').textContent='Windows · v'+r.version;$('status').textContent=r.ready?'已连接 · '+r.binding.name:r.bound?'已绑定，当前群尚未就绪':'尚未绑定 WhatsApp 群';$('dot').className='dot '+(r.ready?'ready':'warn');if(r.error)$('notice').textContent=r.error;document.querySelectorAll('[data-command]').forEach(b=>b.classList.toggle('active',b.dataset.command===r.mode))}catch{$('status').textContent='正在恢复桌面连接';$('dot').className='dot warn'}finally{pollBusy=false}}
+document.addEventListener('click',async event=>{const button=event.target.closest('[data-command]');if(!button)return;const action=button.dataset.command;if(action==='unbind'&&!confirm('解除当前群绑定？之后新消息将停止交给此群。'))return;button.disabled=true;try{const result=await window.atelier.command(action);if(!result.ok)show('操作未完成',result.error||'请检查连接后再试');else if(action==='diagnose')show('连接检查',JSON.stringify(result.diagnostics||result,null,2));else if(result.message)show('连接提示',result.message);await status()}catch(e){show('操作未完成',e.message)}finally{button.disabled=false}});
+const guide='1. 在「工坊」登录原账号，Google 和 AI 配置继续由现有服务器保存。\n2. 在「WhatsApp」用手机扫码登录，打开目标群并加载几条记录。\n3. 点击顶部「绑定当前群」。\n4. 回工坊的 WS 设置，点击「检查连接」，再开启联动。桌面版无需安装 Chrome 扩展。\n5. 先用测试群发送一条非客户测试消息，核对正文与群名。发送成功只表示页面出现气泡，不代表对方已读。\n\n重要：App 与 Chrome 的本地数据独立。原浏览器里未同步的消息不会自动迁移，请保留原网页，直到这些消息确认保存到 Google。打包为 App 不会自动修复 Google 文档连接问题。\n\n所有人设信息都由实际登录的同一个 WhatsApp 账号发送，不会切换为不同账号。结果未知时先核对实际群聊，不要重复点击发送。';
+$('guide').onclick=()=>show('首次使用',guide);
+if(!localStorage.getItem('atelier-desktop-welcome'))show('开始使用桌面版',guide).then(()=>localStorage.setItem('atelier-desktop-welcome','1'));
+status();setInterval(status,10000);

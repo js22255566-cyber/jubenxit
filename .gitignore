@@ -14,3 +14,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 work/
+desktop/generated/
+desktop/release/
+desktop/.smoke-output/
+desktop/.build-cache/
+desktop/assets/icon.ico

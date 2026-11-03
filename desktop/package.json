@@ -1,0 +1,28 @@
+{
+  "name": "dialogue-atelier-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "对白工坊 Windows 桌面版",
+  "author": "Dialogue Atelier",
+  "license": "UNLICENSED",
+  "main": "main.cjs",
+  "scripts": {
+    "prepare:app": "node prepare.cjs",
+    "start": "node prepare.cjs && electron .",
+    "test": "node prepare.cjs && node --test test/*.test.cjs",
+    "dist:win": "node prepare.cjs && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.dialogueatelier.desktop",
+    "productName": "对白工坊",
+    "asar": true,
+    "directories": {"output": "release", "buildResources": "assets"},
+    "files": ["main.cjs", "relay.cjs", "vault.cjs", "policy.cjs", "preload-*.cjs", "shell.html", "shell.js", "generated/**", "assets/icon.ico", "package.json"],
+    "win": {"target": [{"target": "nsis", "arch": ["x64"]}], "icon": "assets/icon.ico", "artifactName": "Dialogue-Atelier-Setup-${version}.${ext}"},
+    "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "shortcutName": "对白工坊", "deleteAppDataOnUninstall": false, "installerIcon": "assets/icon.ico", "uninstallerIcon": "assets/icon.ico", "runAfterFinish": false}
+  }
+}

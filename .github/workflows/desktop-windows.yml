@@ -1,0 +1,41 @@
+name: Windows desktop installer
+on:
+  push:
+    branches: [main]
+    paths: ['desktop/**', 'ws-extension/**', '.github/workflows/desktop-windows.yml']
+  pull_request:
+    paths: ['desktop/**', 'ws-extension/**', '.github/workflows/desktop-windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Installer checksum
+        shell: pwsh
+        run: |
+          Get-ChildItem release/Dialogue-Atelier-Setup-*.exe | ForEach-Object { (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash + '  ' + $_.Name } | Set-Content -Encoding utf8 release/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dialogue-Atelier-Windows-x64
+          path: |
+            desktop/release/Dialogue-Atelier-Setup-*.exe
+            desktop/release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
