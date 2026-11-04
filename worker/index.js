@@ -12,7 +12,24 @@ const sheetSnapshots=new WeakMap(),deferredChanges=new WeakMap(),oauthCache=new 
 function partitions(env){let map={};try{map=JSON.parse(env.GOOGLE_SPREADSHEET_PARTITIONS||'{}')}catch{error('多表分区配置必须为JSON对象。',503)}if(!map||Array.isArray(map)||typeof map!=='object')error('多表分区配置无效。',503);for(const [key,value]of Object.entries(map))if(!names.includes(key)||typeof value!=='string'||!/^[A-Za-z0-9_-]+$/.test(value))error('多表分区配置包含无效工作表或ID。',503);return Object.fromEntries(names.map(n=>[n,map[n]||env.GOOGLE_SPREADSHEET_ID]))}
 function partitionGroups(env){const groups=new Map();for(const [name,id]of Object.entries(partitions(env))){if(!groups.has(id))groups.set(id,[]);groups.get(id).push(name)}return groups}
 function boundedPlans(groups){const out=[];for(const group of groups){let data=[],size=0;const flush=()=>{if(data.length){out.push({id:group.id,data});data=[];size=0}};for(const range of group.data){const base=Number(range.range.match(/![A-Z]+(\d+)/)[1]),prefix=range.range.replace(/\d+$/,'');let chunk=[],chunkStart=0;for(let i=0;i<range.values.length;i++){const row=range.values[i],bytes=JSON.stringify(row).length*3+100;if(size+bytes>1000000){if(chunk.length){data.push({range:prefix+(base+chunkStart),values:chunk});chunk=[]}flush();chunkStart=i}if(!chunk.length)chunkStart=i;chunk.push(row);size+=bytes}if(chunk.length)data.push({range:prefix+(base+chunkStart),values:chunk})}flush()}return out}
-async function applySheetPlan(env,groups){for(const group of groups)if(group.kind==='docs')await applyDocumentPlan(env,group);else await sheets(env,'/values:batchUpdate',{valueInputOption:'RAW',data:group.data},group.id)}
+async function writeSheetValues(env,group){
+ const body={valueInputOption:'RAW',data:group.data};
+ try{return await sheets(env,'/values:batchUpdate',body,group.id)}catch(e){
+  if(!/exceeds grid limits/i.test(e.message))throw e;
+  const required=new Map();
+  for(const item of group.data){const match=/^'([^']+)'!([A-Z]+)([1-9]\d*)$/.exec(item.range);if(!match||!names.includes(match[1])||!Array.isArray(item.values))throw e;
+   const column=[...match[2]].reduce((n,c)=>n*26+c.charCodeAt(0)-64,0),need=required.get(match[1])||{rows:0,columns:0};
+   need.rows=Math.max(need.rows,Number(match[3])+item.values.length-1);need.columns=Math.max(need.columns,column+Math.max(0,...item.values.map(row=>row.length))-1);required.set(match[1],need);
+  }
+  const meta=await sheets(env,'?fields=sheets.properties',undefined,group.id),requests=[];
+  for(const [title,need]of required){const p=meta.sheets?.find(sheet=>sheet.properties.title===title)?.properties;if(!p?.gridProperties)throw e;
+   for(const [dimension,key,amount]of [['ROWS','rowCount',need.rows],['COLUMNS','columnCount',need.columns]])if(amount>p.gridProperties[key])requests.push({appendDimension:{sheetId:p.sheetId,dimension,length:Math.max(dimension==='ROWS'?256:1,amount-p.gridProperties[key])}});
+  }
+  if(requests.length)await sheets(env,':batchUpdate',{requests},group.id);
+  return await sheets(env,'/values:batchUpdate',body,group.id);
+ }
+}
+async function applySheetPlan(env,groups){for(const group of groups)if(group.kind==='docs')await applyDocumentPlan(env,group);else await writeSheetValues(env,group)}
 async function recoverPendingWrite(env){const entry=await env.BUCKET.get('__system/pending-sheet-write'),pending=entry?await entry.json():null;if(!pending?.groups?.length)return;try{await applySheetPlan(env,pending.groups)}catch(e){if(e.documentConflict)await env.BUCKET.put('__system/pending-sheet-write',JSON.stringify({groups:[]}));throw e}if(pending.baseline)await checkpoint(env,pending.baseline);await env.BUCKET.put('__system/pending-sheet-write',JSON.stringify({groups:[]}))}
 const fresh=()=>({id:crypto.randomUUID(),updatedAt:new Date().toISOString()});
 async function locked(env,fn){
